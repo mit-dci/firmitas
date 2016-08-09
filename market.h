@@ -25,7 +25,6 @@ class Market
             double low;
             double close;
             bool up;
-            double stimulusPackage;
             double interestRate;
             double sma100;
             double sma20;
@@ -34,6 +33,8 @@ class Market
             double cci26;
             double volumeCommodity;
             double volumeCurrency;
+            double inflation;
+            double blockReward;
         };
         struct account
         {
@@ -57,8 +58,8 @@ class Market
         candle currentWeeklyCandle;
         account getAccountBalances(account Account);
         void executeOrder(bool buy, double amount, double price, uint64_t account1, uint64_t account2);
-        double calculateStimulusPackage(candle currentCandle, std::map<uint64_t, candle> &candleList);
         double calculateInterestRate(candle currentCandle, std::map<uint64_t, candle> &candleList);
+        double calculateBlockReward(candle currentCandle, std::map<uint64_t, candle> &candleList);
         candle calculateCandle(candle thisCandle, std::map<uint64_t, candle> &candleList);
         void processCCIStrategy(account& Account);
 };
