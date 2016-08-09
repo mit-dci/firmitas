@@ -8,7 +8,6 @@ class Market
 {
     public:
         Market();
-        ~Market();
         struct order
         {
             uint64_t id;
@@ -26,22 +25,42 @@ class Market
             double low;
             double close;
             bool up;
+            double stimulusPackage;
+            double interestRate;
+            double sma100;
+            double sma20;
+            double tpsma26;
+            double typicalPrice;
+            double cci26;
+            double volumeCommodity;
+            double volumeCurrency;
         };
         struct account
         {
             uint64_t id;
             double commodityBalance;
             double currencyBalance;
+            bool bullishBias;
+            bool weeklycciPassed0;
+            bool dailyOversold;
         };
         bool makeTrade(bool buy, double amount, double price, uint64_t accountId);
 
     private:
         std::map<uint64_t, order> orderBook;
         std::map<uint64_t, candle> dailyCandles;
+        std::map<uint64_t, candle> weeklyCandles;
         std::map<uint64_t, account> accounts;
         uint64_t time;
         double currentPrice;
-        candle currentCandle;
+        candle currentDailyCandle;
+        candle currentWeeklyCandle;
+        account getAccountBalances(account Account);
+        void executeOrder(bool buy, double amount, double price, uint64_t account1, uint64_t account2);
+        double calculateStimulusPackage(candle currentCandle, std::map<uint64_t, candle> &candleList);
+        double calculateInterestRate(candle currentCandle, std::map<uint64_t, candle> &candleList);
+        candle calculateCandle(candle thisCandle, std::map<uint64_t, candle> &candleList);
+        void processCCIStrategy(account& Account);
 };
 
 #endif // MARKET_H_INCLUDED

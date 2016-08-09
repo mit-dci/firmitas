@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stdint.h>
 #include <iostream>
+#include <thread>
 
 #include "market.h"
 
@@ -14,69 +15,363 @@ int main()
 
 Market::Market()
 {
+    double blockReward = 50;
+
     time = 0;
     currentPrice = 1;
-    currentCandle.id = 0;
-    currentCandle.high = currentPrice;
-    currentCandle.low = currentPrice;
-    currentCandle.close = currentPrice;
-    currentCandle.up = false;
-    currentCandle.timestamp = time;
-    dailyCandles.insert(std::pair<uint64_t, candle>(currentCandle.id, currentCandle));
+    currentDailyCandle.id = 0;
+    currentDailyCandle.high = currentPrice;
+    currentDailyCandle.low = currentPrice;
+    currentDailyCandle.close = currentPrice;
+    currentDailyCandle.up = false;
+    currentDailyCandle.timestamp = time;
+    currentDailyCandle.stimulusPackage = 1;
+    currentDailyCandle.interestRate = 1;
+    currentDailyCandle.sma100 = 1;
+    currentDailyCandle.sma20 = 1;
+    currentDailyCandle.tpsma26 = 1;
+    currentDailyCandle.cci26 = 0;
+    currentDailyCandle.volumeCommodity = 0;
+    currentDailyCandle.volumeCurrency = 0;
+    dailyCandles.insert(std::pair<uint64_t, candle>(currentDailyCandle.id, currentDailyCandle));
+
+    currentWeeklyCandle.id = 0;
+    currentWeeklyCandle.high = currentPrice;
+    currentWeeklyCandle.low = currentPrice;
+    currentWeeklyCandle.close = currentPrice;
+    currentWeeklyCandle.up = false;
+    currentWeeklyCandle.timestamp = time;
+    currentWeeklyCandle.stimulusPackage = 1;
+    currentWeeklyCandle.interestRate = 1;
+    currentWeeklyCandle.sma100 = 1;
+    currentWeeklyCandle.sma20 = 1;
+    currentWeeklyCandle.tpsma26 = 1;
+    currentWeeklyCandle.cci26 = 0;
+    currentWeeklyCandle.volumeCommodity = 0;
+    currentWeeklyCandle.volumeCurrency = 0;
+    weeklyCandles.insert(std::pair<uint64_t, candle>(currentWeeklyCandle.id, currentWeeklyCandle));
+
     time++;
+
+    std::default_random_engine generator(time);
+    std::uniform_real_distribution<double> distribution(0, 150);
+
+    for(unsigned int i = 0; i < 1000; i++)
+    {
+        account Account;
+        Account.id = i;
+        Account.commodityBalance = distribution(generator);
+        Account.currencyBalance = distribution(generator);
+        accounts.insert(std::pair<uint64_t, account>(Account.id, Account));
+    }
 
     while(true)
     {
         //Make daily candle
         if(time % (60 * 60 * 24) == 0)
         {
-            currentCandle.id++;
-            currentCandle.close = currentPrice;
-            if(currentCandle.close > dailyCandles[currentCandle.id - 1].close)
+            currentDailyCandle = calculateCandle(currentDailyCandle, dailyCandles);
+            dailyCandles.insert(std::pair<uint64_t, candle>(currentDailyCandle.id, currentDailyCandle));
+
+            std::cout << "Daily Candle: " << currentDailyCandle.id << ", High: " << currentDailyCandle.high << ", Low: " << currentDailyCandle.low << ", Close: " << currentDailyCandle.close << ", Up: " << currentDailyCandle.up << ", Stimulus package: " << currentDailyCandle.stimulusPackage << ", Interest rate: " << (currentDailyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentDailyCandle.sma100 << ", SMA(20): $" << currentDailyCandle.sma20 << ", commodityVolume: " << currentDailyCandle.volumeCommodity << ", currencyVolume: " << currentDailyCandle.volumeCurrency << ", CCI(26): " << currentDailyCandle.cci26 << std::endl;
+
+            currentDailyCandle.high = currentPrice;
+            currentDailyCandle.low = currentPrice;
+            currentDailyCandle.volumeCommodity = 0;
+            currentDailyCandle.volumeCurrency = 0;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+
+            for(std::map<uint64_t, account>::iterator it = accounts.begin(); it != accounts.end(); it++)
             {
-                currentCandle.up = true;
+                it->second.commodityBalance *= currentDailyCandle.interestRate;
+            }
+
+            for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
+            {
+                if(!it->second.buy)
+                {
+                    it->second.amount *= currentDailyCandle.interestRate;
+                }
+            }
+
+            for(unsigned int i = 10; i < 50; i++)
+            {
+                processCCIStrategy(accounts[i]);
+            }
+        }
+
+        if(time % (7 * 24 * 60 * 60) == 0)
+        {
+            currentWeeklyCandle = calculateCandle(currentWeeklyCandle, weeklyCandles);
+            weeklyCandles.insert(std::pair<uint64_t, candle>(currentWeeklyCandle.id, currentWeeklyCandle));
+
+            //std::cout << "Weekly Candle: " << currentWeeklyCandle.id << ", High: " << currentWeeklyCandle.high << ", Low: " << currentWeeklyCandle.low << ", Close: " << currentWeeklyCandle.close << ", Up: " << currentWeeklyCandle.up << ", Stimulus package: " << currentWeeklyCandle.stimulusPackage << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentWeeklyCandle.sma100 << ", SMA(20): $" << currentWeeklyCandle.sma20 << ", commodityVolume: " << currentWeeklyCandle.volumeCommodity << ", currencyVolume: " << currentWeeklyCandle.volumeCurrency << ", CCI(26): " << currentWeeklyCandle.cci26 << std::endl;
+
+            currentWeeklyCandle.high = currentPrice;
+            currentWeeklyCandle.low = currentPrice;
+            currentWeeklyCandle.volumeCommodity = 0;
+            currentWeeklyCandle.volumeCurrency = 0;
+        }
+
+        std::uniform_int_distribution<uint64_t> accountIdDistribution(0, 1);
+
+        if(time % 60 == 0)
+        {
+            account Account = accounts[accountIdDistribution(generator)];
+            Account = getAccountBalances(Account);
+            std::uniform_real_distribution<double> commodityBalanceDistribution(0.0000001, Account.commodityBalance);
+            std::uniform_real_distribution<double> currencyBalanceDistribution(0.01, Account.currencyBalance);
+            std::uniform_real_distribution<double> priceDistribution(std::max(currentPrice*0.999, 0.01), currentPrice*1.001);
+            std::uniform_int_distribution<unsigned int> buySellDist(0, 1);
+            double tempPrice = priceDistribution(generator);
+            if(buySellDist(generator))
+            {
+                makeTrade(true, currencyBalanceDistribution(generator) / tempPrice, tempPrice, Account.id);
             }
             else
             {
-                currentCandle.up = false;
+                makeTrade(false, commodityBalanceDistribution(generator), tempPrice, Account.id);
             }
-
-            currentCandle.timestamp = time;
-            dailyCandles.insert(std::pair<uint64_t, candle>(currentCandle.id, currentCandle));
-
-            std::cout << "Candle: " << currentCandle.id << ", High: " << currentCandle.high << ", Low: " << currentCandle.low << ", Close: " << currentCandle.close << ", Up: " << currentCandle.up << std::endl;
-
-            currentCandle.high = currentPrice;
-            currentCandle.low = currentPrice;
         }
+
+        std::uniform_real_distribution<double> growthDistribution(0, 54);
+        std::uniform_int_distribution<uint64_t> blockRewardIdDistribution(0, accounts.size() - 1);
+
+        //Simulate mining
+        if(time % 150 == 0)
+        {
+            accounts[blockRewardIdDistribution(generator)].commodityBalance += currentDailyCandle.stimulusPackage;
+            accounts[blockRewardIdDistribution(generator)].commodityBalance += blockReward;
+            accounts[accountIdDistribution(generator)].currencyBalance += growthDistribution(generator);
+        }
+
+        //Cancel stale orders
+        for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
+        {
+            if((time - it->second.timestamp) > 5 * 24 * 60 * 60)
+            {
+                it = orderBook.erase(it);
+                if(orderBook.size() < 1)
+                {
+                    break;
+                }
+            }
+        }
+
+        //std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         time++;
     }
 }
 
-Market::~Market()
+void Market::processCCIStrategy(account& Account)
 {
+    //Check bias
+    if((currentWeeklyCandle.cci26 < 0 && weeklyCandles[currentWeeklyCandle.id - 1].cci26 > 0) || (currentWeeklyCandle.cci26 > 0 && weeklyCandles[currentWeeklyCandle.id - 1].cci26 < 0))
+    {
+        Account.weeklycciPassed0 = true;
+    }
 
+    if(Account.bullishBias && Account.weeklycciPassed0 && currentWeeklyCandle.cci26 < -100)
+    {
+        Account.bullishBias = false;
+        Account.weeklycciPassed0 = false;
+    }
+
+    if(!Account.bullishBias && Account.weeklycciPassed0 && currentWeeklyCandle.cci26 > 100)
+    {
+        Account.bullishBias = true;
+        Account.weeklycciPassed0 = false;
+    }
+
+    //Check trade
+    if(Account.bullishBias && currentDailyCandle.cci26 < -100)
+    {
+        Account.dailyOversold = true;
+    }
+
+    if(!Account.bullishBias && currentDailyCandle.cci26 > 100)
+    {
+        Account.dailyOversold = false;
+    }
+
+    if(Account.bullishBias && Account.dailyOversold && currentDailyCandle.cci26 < 0 && dailyCandles[currentDailyCandle.id - 1].cci26 > 0)
+    {
+        for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
+        {
+            if(it->second.accountId == Account.id)
+            {
+                it = orderBook.erase(it);
+                if(orderBook.size() < 1)
+                {
+                    break;
+                }
+            }
+        }
+        makeTrade(true, Account.currencyBalance / currentPrice, currentPrice, Account.id);
+    }
+
+    if(!Account.bullishBias && !Account.dailyOversold && currentDailyCandle.cci26 > 0 && dailyCandles[currentDailyCandle.id - 1].cci26 < 0)
+    {
+        for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
+        {
+            if(it->second.accountId == Account.id)
+            {
+                it = orderBook.erase(it);
+                if(orderBook.size() < 1)
+                {
+                    break;
+                }
+            }
+        }
+        Account = getAccountBalances(Account);
+        makeTrade(false, Account.commodityBalance, currentPrice, Account.id);
+    }
 }
 
-bool Market::makeTrade(bool buy, double amount, double price, uint64_t accountId)
+Market::candle Market::calculateCandle(candle thisCandle, std::map<uint64_t, candle> &candleList)
 {
-    double commodityBalance = accounts[accountId].commodityBalance;
-    double currencyBalance = accounts[accountId].currencyBalance;
+    candle currentCandle = thisCandle;
+
+    currentCandle.id++;
+    currentCandle.close = currentPrice;
+    if(currentCandle.close > candleList[currentCandle.id - 1].close)
+    {
+        currentCandle.up = true;
+    }
+    else
+    {
+        currentCandle.up = false;
+    }
+
+    currentCandle.timestamp = time;
+
+    currentCandle.interestRate = calculateInterestRate(currentCandle, candleList);
+    currentCandle.stimulusPackage = calculateStimulusPackage(currentCandle, candleList);
+
+    //Calculate 20-period SMA
+    double total = currentCandle.close;
+    unsigned int i;
+    for(i = 1; i < 100; i++)
+    {
+        int nextId = currentCandle.id - i;
+        if(nextId < 0)
+        {
+            break;
+        }
+        total += candleList[currentCandle.id - i].close;
+    }
+    currentCandle.sma100 = total / i;
+
+    //Calculate 100-period SMA
+    total = currentCandle.close;
+    for(i = 1; i < 20; i++)
+    {
+        int nextId = currentCandle.id - i;
+        if(nextId < 0)
+        {
+            break;
+        }
+        total += candleList[currentCandle.id - i].close;
+    }
+    currentCandle.sma20 = total / i;
+
+    //Calculate typical price
+    currentCandle.typicalPrice = (currentCandle.low + currentCandle.high + currentCandle.close) / 3;
+
+    //Calculate 26-period typical price SMA
+    total = currentCandle.typicalPrice;
+    for(i = 1; i < 26; i++)
+    {
+        int nextId = currentCandle.id - i;
+        if(nextId < 0)
+        {
+            break;
+        }
+        total += candleList[currentCandle.id - i].typicalPrice;
+    }
+    currentCandle.tpsma26 = total / i;
+
+    //Calculate mean deviation
+    total = std::abs(currentCandle.tpsma26 - currentCandle.typicalPrice);
+    for(i = 1; i < 26; i++)
+    {
+        int nextId = currentCandle.id - i;
+        if(nextId < 0)
+        {
+            break;
+        }
+        total += std::abs(currentCandle.tpsma26 - candleList[currentCandle.id - i].typicalPrice);
+    }
+    double meanDeviation = total / i;
+
+    //Calculate 20-period CCI
+    currentCandle.cci26 = (currentCandle.typicalPrice - currentCandle.tpsma26) / (0.015 * meanDeviation);
+
+    return currentCandle;
+}
+
+Market::account Market::getAccountBalances(account Account)
+{
+    double commodityBalance = Account.commodityBalance;
+    double currencyBalance = Account.currencyBalance;
 
     for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
     {
-        if(it->second.buy && it->second.accountId == accountId)
+        if(it->second.buy && it->second.accountId == Account.id)
         {
             currencyBalance -= it->second.amount * it->second.price;
         }
-        else if(!it->second.buy && it->second.accountId == accountId)
+        else if(!it->second.buy && it->second.accountId == Account.id)
         {
             commodityBalance -= it->second.amount;
         }
     }
 
-    if((commodityBalance < amount && !buy) || (currencyBalance < amount && buy))
+    account returning;
+    returning.commodityBalance = commodityBalance;
+    returning.currencyBalance = currencyBalance;
+    returning.id = Account.id;
+
+    return returning;
+}
+
+void Market::executeOrder(bool buy, double amount, double price, uint64_t account1, uint64_t account2)
+{
+    if(buy)
+    {
+        accounts[account1].currencyBalance += (price * amount);
+        accounts[account1].commodityBalance -= amount;
+
+        accounts[account2].currencyBalance -= (price * amount);
+        accounts[account2].commodityBalance += amount;
+
+        //std::cout << account2 << " bought from " << account1 << " " << amount << " of commodity for $" << price << std::endl;
+    }
+    else
+    {
+        accounts[account1].commodityBalance += amount;
+        accounts[account1].currencyBalance -= (price * amount);
+
+        accounts[account2].commodityBalance -= amount;
+        accounts[account2].currencyBalance += (price * amount);
+
+        //std::cout << account2 << " sold to " << account1 << " " << amount << " of commodity for $" << price << std::endl;
+    }
+
+    currentDailyCandle.volumeCommodity += amount;
+    currentDailyCandle.volumeCurrency += amount * price;
+
+    currentWeeklyCandle.volumeCommodity += amount;
+    currentWeeklyCandle.volumeCurrency += amount * price;
+}
+
+bool Market::makeTrade(bool buy, double amount, double price, uint64_t accountId)
+{
+    account Account = getAccountBalances(accounts[accountId]);
+
+    if(((Account.commodityBalance < amount || Account.commodityBalance < 0.00000001) && !buy) || ((Account.currencyBalance < amount * price || Account.currencyBalance < 0.01) && buy) || price < 0.01 || amount <= 0.00000001)
     {
         return false;
     }
@@ -122,80 +417,44 @@ bool Market::makeTrade(bool buy, double amount, double price, uint64_t accountId
                 //Remove order from orderbook
                 orderBook.erase(tempOrders[i].id);
 
-                //Credit order owner
-                if(buy)
-                {
-                    accounts[tempOrders[i].accountId].currencyBalance += (tempOrders[i].price * tempOrders[i].amount);
-                    accounts[tempOrders[i].accountId].commodityBalance -= tempOrders[i].amount;
-
-                    accounts[accountId].currencyBalance -= (tempOrders[i].price * tempOrders[i].amount);
-                    accounts[accountId].commodityBalance += tempOrders[i].amount;
-                }
-                else
-                {
-                    accounts[tempOrders[i].accountId].commodityBalance += tempOrders[i].amount;
-                    accounts[tempOrders[i].accountId].currencyBalance -= (tempOrders[i].price * tempOrders[i].amount);
-
-                    accounts[accountId].commodityBalance -= tempOrders[i].amount;
-                    accounts[accountId].currencyBalance += (tempOrders[i].price * tempOrders[i].amount);
-                }
+                executeOrder(buy, tempOrders[i].amount, tempOrders[i].price, tempOrders[i].accountId, accountId);
             }
             else
             {
                 orderBook[tempOrders[i].id].amount -= newAmount;
 
-                if(buy)
-                {
-                    accounts[tempOrders[i].accountId].currencyBalance += (tempOrders[i].price * newAmount);
-                    accounts[tempOrders[i].accountId].commodityBalance -= newAmount;
-
-                    accounts[accountId].currencyBalance -= (tempOrders[i].price * newAmount);
-                    accounts[accountId].commodityBalance += newAmount;
-                }
-                else
-                {
-                    accounts[tempOrders[i].accountId].currencyBalance -= (tempOrders[i].price * newAmount);
-                    accounts[tempOrders[i].accountId].commodityBalance += newAmount;
-
-                    accounts[accountId].currencyBalance += (tempOrders[i].price * newAmount);
-                    accounts[accountId].commodityBalance -= newAmount;
-                }
+                executeOrder(buy, newAmount, tempOrders[i].price, tempOrders[i].accountId, accountId);
 
                 newAmount = 0;
             }
+
             currentPrice = tempOrders[i].price;
-            if(currentPrice > currentCandle.high)
+            if(currentPrice > currentDailyCandle.high)
             {
-                currentCandle.high = currentPrice;
+                currentDailyCandle.high = currentPrice;
             }
-            if(currentPrice < currentCandle.low)
+            if(currentPrice < currentDailyCandle.low)
             {
-                currentCandle.low = currentPrice;
+                currentDailyCandle.low = currentPrice;
             }
+
+            if(currentPrice > currentWeeklyCandle.high)
+            {
+                currentWeeklyCandle.high = currentPrice;
+            }
+            if(currentPrice < currentWeeklyCandle.low)
+            {
+                currentWeeklyCandle.low = currentPrice;
+            }
+
             i++;
         }
-
-        if(newAmount > 0)
-        {
-            order newOrder;
-            newOrder.amount = newAmount;
-            newOrder.price = price;
-            newOrder.accountId = accountId;
-            newOrder.buy = buy;
-            newOrder.timestamp = time;
-
-            std::default_random_engine generator(time);
-            std::uniform_int_distribution<uint64_t> distribution(0, (2^64) - 1);
-            newOrder.id = distribution(generator);
-            orderBook.insert(std::pair<uint64_t, order>(newOrder.id, newOrder));
-        }
-
-        return true;
     }
-    else
+
+    if(newAmount > 0)
     {
         order newOrder;
-        newOrder.amount = amount;
+        newOrder.amount = newAmount;
         newOrder.price = price;
         newOrder.accountId = accountId;
         newOrder.buy = buy;
@@ -206,7 +465,223 @@ bool Market::makeTrade(bool buy, double amount, double price, uint64_t accountId
         newOrder.id = distribution(generator);
 
         orderBook.insert(std::pair<uint64_t, order>(newOrder.id, newOrder));
-
-        return true;
     }
+
+    return true;
+}
+
+double Market::calculateStimulusPackage(candle currentCandle, std::map<uint64_t, candle> &candleList)
+{
+    const uint64_t minDays = 1;
+    const uint64_t maxDays = 20;
+    const double minRate = 0.0000001;
+    const double maxRate = 1000;
+
+    candle thisCandle = candleList[currentCandle.id - 1];
+
+    if(thisCandle.id < minDays || currentCandle.interestRate < 1)
+    {
+        return 0;
+    }
+    else
+    {
+        uint64_t candlesScanned = 0;
+        double interestAverage = 1;
+        double previousInterestAverage = 1;
+        double actualRate = 0;
+        double targetRate = 0;
+        double rateAdjustmentRatio = 1.0;
+        double eventHorizonDeviation = 0.0;
+        double eventHorizonDeviationFast = 0.0;
+        double eventHorizonDeviationSlow = 0.0;
+
+        for(unsigned int i = 1; thisCandle.id != 0; i++)
+        {
+            if(i > maxDays)
+            {
+                break;
+            }
+
+            candlesScanned++;
+
+            if(i == 1)
+            {
+                interestAverage = thisCandle.stimulusPackage;
+            }
+            else
+            {
+                interestAverage = ((thisCandle.stimulusPackage - previousInterestAverage) / double(i)) + previousInterestAverage;
+            }
+
+            previousInterestAverage = interestAverage;
+
+            actualRate += thisCandle.close;
+            targetRate = candlesScanned;
+            rateAdjustmentRatio = 1.0;
+
+            if(actualRate < 0)
+            {
+                actualRate = 0;
+            }
+
+            if(actualRate != 0 && targetRate != 0)
+            {
+                rateAdjustmentRatio = targetRate / actualRate;
+            }
+
+            eventHorizonDeviation = 1 + (0.7084 * pow((double(candlesScanned)/double(minDays)), -1.228));
+            eventHorizonDeviationFast = eventHorizonDeviation;
+            eventHorizonDeviationSlow = 1 / eventHorizonDeviation;
+
+            if(candlesScanned >= minDays)
+            {
+                if((rateAdjustmentRatio <= eventHorizonDeviationSlow) || (rateAdjustmentRatio >= eventHorizonDeviationFast))
+                {
+                    break;
+                }
+            }
+
+            if(thisCandle.id == 1)
+            {
+                break;
+            }
+            thisCandle = candleList[thisCandle.id - 1];
+        }
+
+        double newRate = interestAverage;
+        if(actualRate != 0 && targetRate != 0)
+        {
+            newRate *= actualRate;
+
+            newRate /= targetRate;
+        }
+
+        if(newRate < minRate)
+        {
+            newRate = minRate;
+        }
+        if(newRate > maxRate)
+        {
+            newRate = maxRate;
+        }
+
+        return newRate;
+    }
+}
+
+double Market::calculateInterestRate(candle currentCandle, std::map<uint64_t, candle> &candleList)
+{
+    /*const uint64_t minDays = 1;
+    const uint64_t maxDays = 1;
+    const double minRate = 0.9;
+    const double maxRate = 1.30;
+
+    candle thisCandle = candleList[currentCandle.id - 1];
+
+    if(thisCandle.id < minDays)
+    {
+        return 1;
+    }
+    else
+    {
+        uint64_t candlesScanned = 0;
+        double interestAverage = 1;
+        double previousInterestAverage = 1;
+        double actualRate = 0;
+        double targetRate = 0;
+        double rateAdjustmentRatio = 1.0;
+        double eventHorizonDeviation = 0.0;
+        double eventHorizonDeviationFast = 0.0;
+        double eventHorizonDeviationSlow = 0.0;
+
+        for(unsigned int i = 1; thisCandle.id != 0; i++)
+        {
+            if(i > maxDays)
+            {
+                break;
+            }
+
+            candlesScanned++;
+
+            if(i == 1)
+            {
+                interestAverage = thisCandle.interestRate;
+            }
+            else
+            {
+                interestAverage = ((thisCandle.interestRate - previousInterestAverage) / double(i)) + previousInterestAverage;
+            }
+
+            previousInterestAverage = interestAverage;
+
+            actualRate += thisCandle.close;
+            targetRate = candlesScanned;
+            rateAdjustmentRatio = 1.0;
+
+            if(actualRate < 0)
+            {
+                actualRate = 0;
+            }
+
+            if(actualRate != 0 && targetRate != 0)
+            {
+                rateAdjustmentRatio = targetRate / actualRate;
+            }
+
+            eventHorizonDeviation = 1 + (0.7084 * pow((double(candlesScanned)/double(minDays)), -1.228));
+            eventHorizonDeviationFast = eventHorizonDeviation;
+            eventHorizonDeviationSlow = 1 / eventHorizonDeviation;
+
+            if(candlesScanned >= minDays)
+            {
+                if((rateAdjustmentRatio <= eventHorizonDeviationSlow) || (rateAdjustmentRatio >= eventHorizonDeviationFast))
+                {
+                    break;
+                }
+            }
+
+            if(thisCandle.id == 1)
+            {
+                break;
+            }
+            thisCandle = candleList[thisCandle.id - 1];
+        }
+
+        double newRate = interestAverage;
+        if(actualRate != 0 && targetRate != 0)
+        {
+            newRate *= actualRate;
+
+            newRate /= targetRate;
+        }
+
+        if(newRate < minRate)
+        {
+            newRate = minRate;
+        }
+        if(newRate > maxRate)
+        {
+            newRate = maxRate;
+        }
+
+        return newRate;
+    }*/
+
+    double newRate = currentCandle.interestRate;
+    double dP = currentCandle.typicalPrice - candleList[currentCandle.id - 2].typicalPrice;
+
+    newRate += dP;
+
+    newRate *= currentCandle.typicalPrice;
+
+    if(newRate > 1.5)
+    {
+        newRate = 1.5;
+    }
+    if(newRate < 0.9)
+    {
+        newRate = 0.9;
+    }
+
+    return newRate;
 }
