@@ -38,6 +38,7 @@
 		</Linker>
 		<Unit filename="market.cpp" />
 		<Unit filename="market.h" />
+		<Unit filename="strategies.cpp" />
 		<Extensions>
 			<code_completion />
 			<debugger />

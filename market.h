@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <random>
 
 class Market
 {
@@ -24,6 +25,7 @@ class Market
             double high;
             double low;
             double close;
+            double open;
             bool up;
             double interestRate;
             double sma100;
@@ -35,6 +37,11 @@ class Market
             double volumeCurrency;
             double inflation;
             double blockReward;
+            double sma200;
+            double sma5;
+            double rsi2;
+            double averageGain;
+            double averageLoss;
         };
         struct account
         {
@@ -62,6 +69,9 @@ class Market
         double calculateBlockReward(candle currentCandle, std::map<uint64_t, candle> &candleList);
         candle calculateCandle(candle thisCandle, std::map<uint64_t, candle> &candleList);
         void processCCIStrategy(account& Account);
+        void processRSI2Strategy(account& Account);
+        void processRandomStrategy(account& Account);
+        std::default_random_engine generator;
 };
 
 #endif // MARKET_H_INCLUDED
