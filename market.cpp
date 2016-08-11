@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <iostream>
 #include <thread>
+#include <fstream>
+#include <ctime>
+#include <sstream>
 
 #include "market.h"
 
@@ -77,7 +80,12 @@ Market::Market()
         accounts.insert(std::pair<uint64_t, account>(Account.id, Account));
     }
 
-    while(true)
+    std::ofstream candleFile;
+    std::stringstream filename;
+    filename << std::chrono::system_clock::now().time_since_epoch().count() << "_candles.csv";
+    candleFile.open(filename.str());
+
+    while(time <= 50 * 365 * 24 * 60 * 60)
     {
         //Make daily candle
         if(time % (60 * 60 * 24) == 0)
@@ -87,13 +95,19 @@ Market::Market()
 
             std::cout << "Daily Candle: " << currentDailyCandle.id << ", High: " << currentDailyCandle.high << ", Low: " << currentDailyCandle.low << ", Close: " << currentDailyCandle.close << ", Up: " << currentDailyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentDailyCandle.sma100 << ", SMA(20): $" << currentDailyCandle.sma20 << ", commodityVolume: " << currentDailyCandle.volumeCommodity << ", currencyVolume: " << currentDailyCandle.volumeCurrency << ", CCI(26): " << currentDailyCandle.cci26 << ", Inflation: " << (1 - currentDailyCandle.inflation) * 100 << "%, Block reward: " << currentDailyCandle.blockReward << ", RSI(2): " << currentDailyCandle.rsi2 << std::endl;
 
+            time_t tt = time;
+            struct tm * ptm = std::localtime(&tt);
+            char buf[9];
+            std::strftime(buf, 9, "%Y%m%d", ptm);
+            candleFile << buf << "," << currentDailyCandle.open << "," << currentDailyCandle.close << "," << currentDailyCandle.high << "," << currentDailyCandle.low << "," << currentDailyCandle.volumeCurrency << "\n";
+
             currentDailyCandle.high = currentPrice;
             currentDailyCandle.low = currentPrice;
             currentDailyCandle.volumeCommodity = 0;
             currentDailyCandle.volumeCurrency = 0;
             currentDailyCandle.open = currentDailyCandle.close;
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            //std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             for(std::map<uint64_t, account>::iterator it = accounts.begin(); it != accounts.end(); it++)
             {
@@ -180,6 +194,8 @@ Market::Market()
 
         time++;
     }
+
+    candleFile.close();
 }
 
 Market::candle Market::calculateCandle(candle thisCandle, std::map<uint64_t, candle> &candleList)
