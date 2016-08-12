@@ -72,6 +72,8 @@ class Market
         void processRSI2Strategy(account& Account);
         void processRandomStrategy(account& Account);
         std::default_random_engine generator;
+        double getTotalCommodity();
+        double getTotalCurrency();
 };
 
 #endif // MARKET_H_INCLUDED

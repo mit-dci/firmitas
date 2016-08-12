@@ -70,7 +70,7 @@ void Market::processRandomStrategy(account& Account)
     Account = getAccountBalances(Account);
     std::uniform_real_distribution<double> commodityBalanceDistribution(0.0000001, Account.commodityBalance);
     std::uniform_real_distribution<double> currencyBalanceDistribution(0.01, Account.currencyBalance);
-    std::uniform_real_distribution<double> priceDistribution(std::max(currentPrice*0.999, 0.01), currentPrice*1.001);
+    std::uniform_real_distribution<double> priceDistribution(std::max(currentPrice * 0.999, 0.01), currentPrice * 1.001);
     std::uniform_int_distribution<unsigned int> buySellDist(0, 1);
     double tempPrice = priceDistribution(generator);
     if(buySellDist(generator))

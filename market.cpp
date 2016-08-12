@@ -71,7 +71,7 @@ Market::Market()
 
     std::uniform_real_distribution<double> distribution(0, 316);
 
-    for(unsigned int i = 0; i < 100000; i++)
+    for(unsigned int i = 0; i < 950; i++)
     {
         account Account;
         Account.id = i;
@@ -85,7 +85,7 @@ Market::Market()
     filename << std::chrono::system_clock::now().time_since_epoch().count() << "_candles.csv";
     candleFile.open(filename.str());
 
-    while(time <= 50 * 365 * 24 * 60 * 60)
+    while(time <= 20 * 365 * 24 * 60 * 60)
     {
         //Make daily candle
         if(time % (60 * 60 * 24) == 0)
@@ -93,7 +93,7 @@ Market::Market()
             currentDailyCandle = calculateCandle(currentDailyCandle, dailyCandles);
             dailyCandles.insert(std::pair<uint64_t, candle>(currentDailyCandle.id, currentDailyCandle));
 
-            std::cout << "Daily Candle: " << currentDailyCandle.id << ", High: " << currentDailyCandle.high << ", Low: " << currentDailyCandle.low << ", Close: " << currentDailyCandle.close << ", Up: " << currentDailyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentDailyCandle.sma100 << ", SMA(20): $" << currentDailyCandle.sma20 << ", commodityVolume: " << currentDailyCandle.volumeCommodity << ", currencyVolume: " << currentDailyCandle.volumeCurrency << ", CCI(26): " << currentDailyCandle.cci26 << ", Inflation: " << (1 - currentDailyCandle.inflation) * 100 << "%, Block reward: " << currentDailyCandle.blockReward << ", RSI(2): " << currentDailyCandle.rsi2 << std::endl;
+            //std::cout << "Daily Candle: " << currentDailyCandle.id << ", High: " << currentDailyCandle.high << ", Low: " << currentDailyCandle.low << ", Close: " << currentDailyCandle.close << ", Up: " << currentDailyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentDailyCandle.sma100 << ", SMA(20): $" << currentDailyCandle.sma20 << ", commodityVolume: " << currentDailyCandle.volumeCommodity << ", currencyVolume: " << currentDailyCandle.volumeCurrency << ", CCI(26): " << currentDailyCandle.cci26 << ", Inflation: " << (1 - currentDailyCandle.inflation) * 100 << "%, Block reward: " << currentDailyCandle.blockReward << ", RSI(2): " << currentDailyCandle.rsi2 << std::endl;
 
             time_t tt = time;
             struct tm * ptm = std::localtime(&tt);
@@ -128,7 +128,7 @@ Market::Market()
             currentWeeklyCandle = calculateCandle(currentWeeklyCandle, weeklyCandles);
             weeklyCandles.insert(std::pair<uint64_t, candle>(currentWeeklyCandle.id, currentWeeklyCandle));
 
-            //std::cout << "Weekly Candle: " << currentWeeklyCandle.id << ", High: " << currentWeeklyCandle.high << ", Low: " << currentWeeklyCandle.low << ", Close: " << currentWeeklyCandle.close << ", Up: " << currentWeeklyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentWeeklyCandle.sma100 << ", SMA(20): $" << currentWeeklyCandle.sma20 << ", commodityVolume: " << currentWeeklyCandle.volumeCommodity << ", currencyVolume: " << currentWeeklyCandle.volumeCurrency << ", CCI(26): " << currentWeeklyCandle.cci26 << ", Inflation: " << (1 - currentWeeklyCandle.inflation) * 100 << "%, Block reward: " << currentWeeklyCandle.blockReward << std::endl;
+            std::cout << "Weekly Candle: " << currentWeeklyCandle.id << ", High: " << currentWeeklyCandle.high << ", Low: " << currentWeeklyCandle.low << ", Close: " << currentWeeklyCandle.close << ", Up: " << currentWeeklyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentWeeklyCandle.sma100 << ", SMA(20): $" << currentWeeklyCandle.sma20 << ", commodityVolume: " << currentWeeklyCandle.volumeCommodity << ", currencyVolume: " << currentWeeklyCandle.volumeCurrency << ", CCI(26): " << currentWeeklyCandle.cci26 << ", Inflation: " << (1 - currentWeeklyCandle.inflation) * 100 << "%, Block reward: " << currentWeeklyCandle.blockReward << ", Total currency: $" << getTotalCurrency() << ", Total commodity: " << getTotalCommodity() << std::endl;
 
             currentWeeklyCandle.high = currentPrice;
             currentWeeklyCandle.low = currentPrice;
@@ -196,6 +196,23 @@ Market::Market()
     }
 
     candleFile.close();
+
+    for(std::map<uint64_t, account>::iterator it = accounts.begin(); it != accounts.end(); it++)
+    {
+        std::cout << "Account " << it->second.id << ", currency: $" << it->second.currencyBalance << ", commodity: " << it->second.commodityBalance << std::endl;
+    }
+
+    for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
+    {
+        if(it->second.buy)
+        {
+            std::cout << "Account " << it->second.accountId << " buying, amount: " << it->second.amount << ", price: $" << it->second.price << std::endl;
+        }
+        else
+        {
+            std::cout << "Account " << it->second.accountId << " selling, amount: " << it->second.amount << ", price: $" << it->second.price << std::endl;
+        }
+    }
 }
 
 Market::candle Market::calculateCandle(candle thisCandle, std::map<uint64_t, candle> &candleList)
@@ -711,4 +728,26 @@ double Market::calculateBlockReward(candle currentCandle, std::map<uint64_t, can
 
         return newRate;
     }
+}
+
+double Market::getTotalCommodity()
+{
+    double commodity = 0;
+    for(std::map<uint64_t, account>::iterator it = accounts.begin(); it != accounts.end(); it++)
+    {
+        commodity += it->second.commodityBalance;
+    }
+
+    return commodity;
+}
+
+double Market::getTotalCurrency()
+{
+    double currency = 0;
+    for(std::map<uint64_t, account>::iterator it = accounts.begin(); it != accounts.end(); it++)
+    {
+        currency += it->second.currencyBalance;
+    }
+
+    return currency;
 }
