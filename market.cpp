@@ -108,13 +108,7 @@ Market::Market()
     filename << std::chrono::system_clock::now().time_since_epoch().count() << "_candles.csv";
     candleFile.open(filename.str());
 
-<<<<<<< HEAD
-    while(time <= 20 * 365 * 24 * 60 * 60)
-=======
-    //double blockReward = 50;
-
     while(time <= 10 * 365 * 24 * 60 * 60)
->>>>>>> 19a8eace205705d858e16e824692633d94cc3bf2
     {
         //Make daily candle
         if(time % (60 * 60 * 24) == 0)
@@ -171,11 +165,7 @@ Market::Market()
             currentWeeklyCandle = calculateCandle(currentWeeklyCandle, weeklyCandles);
             weeklyCandles.insert(std::pair<uint64_t, candle>(currentWeeklyCandle.id, currentWeeklyCandle));
 
-<<<<<<< HEAD
             std::cout << "Weekly Candle: " << currentWeeklyCandle.id << ", High: " << currentWeeklyCandle.high << ", Low: " << currentWeeklyCandle.low << ", Close: " << currentWeeklyCandle.close << ", Up: " << currentWeeklyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentWeeklyCandle.sma100 << ", SMA(20): $" << currentWeeklyCandle.sma20 << ", commodityVolume: " << currentWeeklyCandle.volumeCommodity << ", currencyVolume: " << currentWeeklyCandle.volumeCurrency << ", CCI(26): " << currentWeeklyCandle.cci26 << ", Inflation: " << (1 - currentWeeklyCandle.inflation) * 100 << "%, Block reward: " << currentWeeklyCandle.blockReward << ", Total currency: $" << getTotalCurrency() << ", Total commodity: " << getTotalCommodity() << std::endl;
-=======
-            std::cout << "Weekly Candle: " << currentWeeklyCandle.id << ", High: " << currentWeeklyCandle.high << ", Low: " << currentWeeklyCandle.low << ", Close: " << currentWeeklyCandle.close << ", Up: " << currentWeeklyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentWeeklyCandle.sma100 << ", SMA(20): $" << currentWeeklyCandle.sma20 << ", commodityVolume: " << currentWeeklyCandle.volumeCommodity << ", currencyVolume: " << currentWeeklyCandle.volumeCurrency << ", CCI(26): " << currentWeeklyCandle.cci26 << ", Inflation: " << (1 - currentWeeklyCandle.inflation) * 100 << "%, Block reward: " << currentWeeklyCandle.blockReward << std::endl;
->>>>>>> 19a8eace205705d858e16e824692633d94cc3bf2
 
             currentWeeklyCandle.high = currentPrice;
             currentWeeklyCandle.low = currentPrice;
@@ -586,8 +576,8 @@ double Market::calculateInterestRate(candle currentCandle, std::map<uint64_t, ca
 {
     /*const uint64_t minDays = 1;
     const uint64_t maxDays = 30;*/
-    const double minRate = 0.95;
-    const double maxRate = 1.15;
+    const double minRate = 0.98;
+    const double maxRate = 1.02;
 
     /*candle thisCandle = candleList[currentCandle.id - 1];
 
