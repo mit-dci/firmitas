@@ -58,11 +58,13 @@ class Market
         std::map<uint64_t, order> orderBook;
         std::map<uint64_t, candle> dailyCandles;
         std::map<uint64_t, candle> weeklyCandles;
+        std::map<uint64_t, candle> monthlyCandles;
         std::map<uint64_t, account> accounts;
         uint64_t time;
         double currentPrice;
         candle currentDailyCandle;
         candle currentWeeklyCandle;
+        candle currentMonthlyCandle;
         account getAccountBalances(account Account);
         void executeOrder(bool buy, double amount, double price, uint64_t account1, uint64_t account2);
         double calculateInterestRate(candle currentCandle, std::map<uint64_t, candle> &candleList);
