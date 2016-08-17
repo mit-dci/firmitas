@@ -2,3 +2,4 @@ bin
 obj
 simulator.depend
 simulator.layout
+*.csv
