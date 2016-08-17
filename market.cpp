@@ -689,8 +689,8 @@ double Market::calculateBlockReward(candle currentCandle, std::map<uint64_t, can
 {
     candle thisCandle = candleList[currentCandle.id - 1];
 
-    double dP = thisCandle.sma5 - candleList[thisCandle.id - 1].sma5;
-    double ddP = dP - (candleList[thisCandle.id - 1].sma5 - candleList[thisCandle.id - 2].sma5);
+    //double dP = thisCandle.sma5 - candleList[thisCandle.id - 1].sma5;
+    //double ddP = dP - (candleList[thisCandle.id - 1].sma5 - candleList[thisCandle.id - 2].sma5);
     double error = thisCandle.typicalPrice - 1;
 
     double newTarget = thisCandle.blockReward;
