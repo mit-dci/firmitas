@@ -116,7 +116,7 @@ Market::Market()
             currentDailyCandle = calculateCandle(currentDailyCandle, dailyCandles);
             dailyCandles.insert(std::pair<uint64_t, candle>(currentDailyCandle.id, currentDailyCandle));
 
-            //std::cout << "Daily Candle: " << currentDailyCandle.id << ", High: " << currentDailyCandle.high << ", Low: " << currentDailyCandle.low << ", Close: " << currentDailyCandle.close << ", Up: " << currentDailyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentDailyCandle.sma100 << ", SMA(20): $" << currentDailyCandle.sma20 << ", commodityVolume: " << currentDailyCandle.volumeCommodity << ", currencyVolume: " << currentDailyCandle.volumeCurrency << ", CCI(26): " << currentDailyCandle.cci26 << ", Inflation: " << (1 - currentDailyCandle.inflation) * 100 << "%, Block reward: " << currentDailyCandle.blockReward << ", RSI(2): " << currentDailyCandle.rsi2 << std::endl;
+            std::cout << "Daily Candle: " << currentDailyCandle.id << ", High: " << currentDailyCandle.high << ", Low: " << currentDailyCandle.low << ", Close: " << currentDailyCandle.close << ", Up: " << currentDailyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentDailyCandle.sma100 << ", SMA(20): $" << currentDailyCandle.sma20 << ", commodityVolume: " << currentDailyCandle.volumeCommodity << ", currencyVolume: " << currentDailyCandle.volumeCurrency << ", CCI(26): " << currentDailyCandle.cci26 << ", Inflation: " << (1 - currentDailyCandle.inflation) * 100 << "%, Block reward: " << currentDailyCandle.blockReward << ", RSI(2): " << currentDailyCandle.rsi2 << std::endl;
 
             time_t tt = time;
             struct tm * ptm = std::localtime(&tt);
@@ -165,7 +165,7 @@ Market::Market()
             currentWeeklyCandle = calculateCandle(currentWeeklyCandle, weeklyCandles);
             weeklyCandles.insert(std::pair<uint64_t, candle>(currentWeeklyCandle.id, currentWeeklyCandle));
 
-            std::cout << "Weekly Candle: " << currentWeeklyCandle.id << ", High: " << currentWeeklyCandle.high << ", Low: " << currentWeeklyCandle.low << ", Close: " << currentWeeklyCandle.close << ", Up: " << currentWeeklyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentWeeklyCandle.sma100 << ", SMA(20): $" << currentWeeklyCandle.sma20 << ", commodityVolume: " << currentWeeklyCandle.volumeCommodity << ", currencyVolume: " << currentWeeklyCandle.volumeCurrency << ", CCI(26): " << currentWeeklyCandle.cci26 << ", Inflation: " << (1 - currentWeeklyCandle.inflation) * 100 << "%, Block reward: " << currentWeeklyCandle.blockReward << ", Total currency: $" << getTotalCurrency() << ", Total commodity: " << getTotalCommodity() << std::endl;
+            //std::cout << "Weekly Candle: " << currentWeeklyCandle.id << ", High: " << currentWeeklyCandle.high << ", Low: " << currentWeeklyCandle.low << ", Close: " << currentWeeklyCandle.close << ", Up: " << currentWeeklyCandle.up << ", Interest rate: " << (currentWeeklyCandle.interestRate - 1) * 100 << "%, SMA(100): $" << currentWeeklyCandle.sma100 << ", SMA(20): $" << currentWeeklyCandle.sma20 << ", commodityVolume: " << currentWeeklyCandle.volumeCommodity << ", currencyVolume: " << currentWeeklyCandle.volumeCurrency << ", CCI(26): " << currentWeeklyCandle.cci26 << ", Inflation: " << (1 - currentWeeklyCandle.inflation) * 100 << "%, Block reward: " << currentWeeklyCandle.blockReward << ", Total currency: $" << getTotalCurrency() << ", Total commodity: " << getTotalCommodity() << std::endl;
 
             currentWeeklyCandle.high = currentPrice;
             currentWeeklyCandle.low = currentPrice;
@@ -576,8 +576,8 @@ double Market::calculateInterestRate(candle currentCandle, std::map<uint64_t, ca
 {
     /*const uint64_t minDays = 1;
     const uint64_t maxDays = 30;*/
-    const double minRate = 0.98;
-    const double maxRate = 1.02;
+    const double minRate = 0.99;
+    const double maxRate = 1.01;
 
     /*candle thisCandle = candleList[currentCandle.id - 1];
 
@@ -681,8 +681,8 @@ double Market::calculateInterestRate(candle currentCandle, std::map<uint64_t, ca
         newRate = maxRate;
     }
 
-    return newRate;
-    //return 1;
+    //return newRate;
+    return 1;
 }
 
 double Market::calculateBlockReward(candle currentCandle, std::map<uint64_t, candle> &candleList)
@@ -691,21 +691,36 @@ double Market::calculateBlockReward(candle currentCandle, std::map<uint64_t, can
 
     //double dP = thisCandle.sma5 - candleList[thisCandle.id - 1].sma5;
     //double ddP = dP - (candleList[thisCandle.id - 1].sma5 - candleList[thisCandle.id - 2].sma5);
+
+    const unsigned int maxLookback = 30;
+
+    const double kP = 0.1;
+    const double kI = 0.2;
+    const double kD = 1;
+
     double error = thisCandle.typicalPrice - 1;
+    double integral = 0;
 
-    double newTarget = thisCandle.blockReward;
+    for(unsigned int i = 0; i < maxLookback; i++)
+    {
+        integral += (candleList[thisCandle.id - i].typicalPrice - 1);
+        if(thisCandle.id - i <= 0)
+        {
+            break;
+        }
+    }
 
-    newTarget += error;
+    double derivative = error - (candleList[thisCandle.id - 1].typicalPrice - 1);
 
-    newTarget *= thisCandle.typicalPrice;
+    double newTarget = (kP * error) + (kI * integral) + (kD * derivative);
 
     if(newTarget < 0)
     {
         newTarget = 0;
     }
-    if(newTarget > 50)
+    if(newTarget > 1500)
     {
-        newTarget = 50;
+        newTarget = 1500;
     }
 
     return newTarget;
