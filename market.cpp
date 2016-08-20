@@ -692,11 +692,11 @@ double Market::calculateBlockReward(candle currentCandle, std::map<uint64_t, can
     //double dP = thisCandle.sma5 - candleList[thisCandle.id - 1].sma5;
     //double ddP = dP - (candleList[thisCandle.id - 1].sma5 - candleList[thisCandle.id - 2].sma5);
 
-    const unsigned int maxLookback = 30;
+    const unsigned int maxLookback = 365;
 
-    const double kP = 0.1;
-    const double kI = 0.2;
-    const double kD = 1;
+    const double kP = 1;
+    const double kI = 2.5;
+    const double kD = 0.25;
 
     double error = thisCandle.typicalPrice - 1;
     double integral = 0;
