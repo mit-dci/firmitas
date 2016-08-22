@@ -184,7 +184,7 @@ Market::Market()
             std::cout << "Yearly inflation: " << (1 - (currentWeeklyCandle.sma20 / weeklyCandles[currentWeeklyCandle.id - 54].sma20)) * 100 << "%\n";
         }*/
 
-        std::uniform_int_distribution<uint64_t> accountIdDistribution(0, 950);
+        std::uniform_int_distribution<uint64_t> accountIdDistribution(0, 949);
 
         if(time % 15 == 0)
         {
@@ -197,7 +197,7 @@ Market::Market()
             {
                 processCCIStrategy(Account);
             }
-            else
+            else if(Account.id < 950)
             {
                 processRSI2Strategy(Account);
             }
