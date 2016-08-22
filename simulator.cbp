@@ -35,7 +35,11 @@
 		</Compiler>
 		<Linker>
 			<Add option="-m64" />
+			<Add option="-larmadillo" />
+			<Add option="-lopenblas" />
 		</Linker>
+		<Unit filename="genetic.cpp" />
+		<Unit filename="genetic.h" />
 		<Unit filename="market.cpp" />
 		<Unit filename="market.h" />
 		<Unit filename="strategies.cpp" />

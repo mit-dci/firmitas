@@ -53,6 +53,11 @@ class Market
             bool dailyOversold;
         };
         bool makeTrade(bool buy, double amount, double price, uint64_t accountId);
+        account getAccount(uint64_t accountId);
+        void clearOrders(uint64_t accountId);
+        account getAccountBalances(account Account);
+        double getCurrentPrice();
+        std::default_random_engine generator;
 
     private:
         std::map<uint64_t, order> orderBook;
@@ -65,7 +70,6 @@ class Market
         candle currentDailyCandle;
         candle currentWeeklyCandle;
         candle currentMonthlyCandle;
-        account getAccountBalances(account Account);
         void executeOrder(bool buy, double amount, double price, uint64_t account1, uint64_t account2);
         double calculateInterestRate(candle currentCandle, std::map<uint64_t, candle> &candleList);
         double calculateBlockReward(candle currentCandle, std::map<uint64_t, candle> &candleList);
@@ -73,9 +77,9 @@ class Market
         void processCCIStrategy(account& Account);
         void processRSI2Strategy(account& Account);
         void processRandomStrategy(account& Account);
-        std::default_random_engine generator;
         double getTotalCommodity();
         double getTotalCurrency();
+        class geneticStrategy;
 };
 
 #endif // MARKET_H_INCLUDED

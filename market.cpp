@@ -8,6 +8,7 @@
 #include <sstream>
 
 #include "market.h"
+#include "genetic.h"
 
 int main()
 {
@@ -108,6 +109,12 @@ Market::Market()
     filename << std::chrono::system_clock::now().time_since_epoch().count() << "_candles.csv";
     candleFile.open(filename.str());
 
+    std::vector<uint64_t> tempIds;
+    tempIds.push_back(900);
+    tempIds.push_back(901);
+    tempIds.push_back(902);
+    geneticStrategy genStrat(this, tempIds);
+
     while(time <= 10 * 365 * 24 * 60 * 60)
     {
         //Make daily candle
@@ -129,6 +136,21 @@ Market::Market()
             currentDailyCandle.volumeCommodity = 0;
             currentDailyCandle.volumeCurrency = 0;
             currentDailyCandle.open = currentDailyCandle.close;
+
+            std::vector<double> tempPrices;
+            for(unsigned int i = 0; i < 1000; i++)
+            {
+                if(currentDailyCandle.id - i < 0)
+                {
+                    tempPrices.push_back(1);
+                }
+                else
+                {
+                    tempPrices.push_back(dailyCandles[currentDailyCandle.id - i].typicalPrice);
+                }
+            }
+
+            genStrat.executeStrategy(tempPrices);
 
             for(std::map<uint64_t, account>::iterator it = accounts.begin(); it != accounts.end(); it++)
             {
@@ -172,6 +194,8 @@ Market::Market()
             currentWeeklyCandle.volumeCommodity = 0;
             currentWeeklyCandle.volumeCurrency = 0;
             currentWeeklyCandle.open = currentWeeklyCandle.close;
+
+            genStrat.evolve();
         }
 
         /*if(time % (30 * 7 * 24 * 60 * 60) == 0)
@@ -197,7 +221,7 @@ Market::Market()
             {
                 processCCIStrategy(Account);
             }
-            else if(Account.id < 950)
+            else if(Account.id < 900)
             {
                 processRSI2Strategy(Account);
             }
@@ -692,11 +716,11 @@ double Market::calculateBlockReward(candle currentCandle, std::map<uint64_t, can
     //double dP = thisCandle.sma5 - candleList[thisCandle.id - 1].sma5;
     //double ddP = dP - (candleList[thisCandle.id - 1].sma5 - candleList[thisCandle.id - 2].sma5);
 
-    const unsigned int maxLookback = 365;
+    const unsigned int maxLookback = 100;
 
-    const double kP = 1;
-    const double kI = 2.5;
-    const double kD = 0.25;
+    const double kP = 100;
+    const double kI = 0;
+    const double kD = 200;
 
     double error = thisCandle.typicalPrice - 1;
     double integral = 0;
@@ -835,4 +859,30 @@ double Market::getTotalCurrency()
     }
 
     return currency;
+}
+
+Market::account Market::getAccount(uint64_t accountId)
+{
+    account tempAccount = getAccountBalances(accounts[accountId]);
+    return tempAccount;
+}
+
+void Market::clearOrders(uint64_t accountId)
+{
+    for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
+    {
+        if(it->second.accountId == accountId)
+        {
+            it = orderBook.erase(it);
+            if(orderBook.size() < 1)
+            {
+                break;
+            }
+        }
+    }
+}
+
+double Market::getCurrentPrice()
+{
+    return currentPrice;
 }

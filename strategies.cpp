@@ -33,33 +33,14 @@ void Market::processCCIStrategy(account& Account)
 
     if(Account.bullishBias && Account.dailyOversold && currentDailyCandle.cci26 < 0 && dailyCandles[currentDailyCandle.id - 1].cci26 > 0)
     {
-        for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
-        {
-            if(it->second.accountId == Account.id)
-            {
-                it = orderBook.erase(it);
-                if(orderBook.size() < 1)
-                {
-                    break;
-                }
-            }
-        }
+        clearOrders(Account.id);
+        Account = getAccountBalances(Account);
         makeTrade(true, (Account.currencyBalance / currentPrice), currentPrice, Account.id);
     }
 
     if(!Account.bullishBias && !Account.dailyOversold && currentDailyCandle.cci26 > 0 && dailyCandles[currentDailyCandle.id - 1].cci26 < 0)
     {
-        for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
-        {
-            if(it->second.accountId == Account.id)
-            {
-                it = orderBook.erase(it);
-                if(orderBook.size() < 1)
-                {
-                    break;
-                }
-            }
-        }
+        clearOrders(Account.id);
         Account = getAccountBalances(Account);
         makeTrade(false, Account.commodityBalance, currentPrice, Account.id);
     }
@@ -100,17 +81,7 @@ void Market::processRSI2Strategy(account& Account)
 
     if(trading)
     {
-        for(std::map<uint64_t, order>::iterator it = orderBook.begin(); it != orderBook.end(); it++)
-        {
-            if(it->second.accountId == Account.id)
-            {
-                it = orderBook.erase(it);
-                if(orderBook.size() < 1)
-                {
-                    break;
-                }
-            }
-        }
+        clearOrders(Account.id);
 
         Account = getAccountBalances(Account);
 
