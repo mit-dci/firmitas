@@ -95,7 +95,7 @@ Market::Market()
 
     std::uniform_real_distribution<double> distribution(0, 316);
 
-    for(unsigned int i = 0; i < 950; i++)
+    for(unsigned int i = 0; i < 951; i++)
     {
         account Account;
         Account.id = i;
@@ -109,11 +109,17 @@ Market::Market()
     filename << std::chrono::system_clock::now().time_since_epoch().count() << "_candles.csv";
     candleFile.open(filename.str());
 
-    std::vector<uint64_t> tempIds;
-    tempIds.push_back(900);
-    tempIds.push_back(901);
-    tempIds.push_back(902);
-    geneticStrategy genStrat(this, tempIds);
+    std::vector<geneticStrategy> genStrats;
+
+    for(unsigned int i = 300; i < 951; i += 3)
+    {
+        std::vector<uint64_t> tempIds;
+        tempIds.push_back(i);
+        tempIds.push_back(i + 1);
+        tempIds.push_back(i + 2);
+        geneticStrategy genStrat(this, tempIds);
+        genStrats.push_back(genStrat);
+    }
 
     while(time <= 10 * 365 * 24 * 60 * 60)
     {
@@ -136,21 +142,6 @@ Market::Market()
             currentDailyCandle.volumeCommodity = 0;
             currentDailyCandle.volumeCurrency = 0;
             currentDailyCandle.open = currentDailyCandle.close;
-
-            std::vector<double> tempPrices;
-            for(unsigned int i = 0; i < 1000; i++)
-            {
-                if(currentDailyCandle.id - i < 0)
-                {
-                    tempPrices.push_back(1);
-                }
-                else
-                {
-                    tempPrices.push_back(dailyCandles[currentDailyCandle.id - i].typicalPrice);
-                }
-            }
-
-            genStrat.executeStrategy(tempPrices);
 
             for(std::map<uint64_t, account>::iterator it = accounts.begin(); it != accounts.end(); it++)
             {
@@ -195,7 +186,10 @@ Market::Market()
             currentWeeklyCandle.volumeCurrency = 0;
             currentWeeklyCandle.open = currentWeeklyCandle.close;
 
-            genStrat.evolve();
+            for(std::vector<geneticStrategy>::iterator it = genStrats.begin(); it != genStrats.end(); it++)
+            {
+                (*it).evolve();
+            }
         }
 
         /*if(time % (30 * 7 * 24 * 60 * 60) == 0)
@@ -208,22 +202,38 @@ Market::Market()
             std::cout << "Yearly inflation: " << (1 - (currentWeeklyCandle.sma20 / weeklyCandles[currentWeeklyCandle.id - 54].sma20)) * 100 << "%\n";
         }*/
 
-        std::uniform_int_distribution<uint64_t> accountIdDistribution(0, 949);
+        std::uniform_int_distribution<uint64_t> accountIdDistribution(0, 950);
 
         if(time % 15 == 0)
         {
             account Account = accounts[accountIdDistribution(generator)];
-            if(Account.id < 317)
+            if(Account.id < 100)
             {
                 processRandomStrategy(Account);
             }
-            else if(Account.id < 658)
+            else if(Account.id < 200)
             {
                 processCCIStrategy(Account);
             }
-            else if(Account.id < 900)
+            else if(Account.id < 300)
             {
                 processRSI2Strategy(Account);
+            }
+            else
+            {
+                std::vector<double> tempPrices;
+                for(unsigned int i = 0; i < 1000; i++)
+                {
+                    if(currentDailyCandle.id - i < 0)
+                    {
+                        tempPrices.push_back(1);
+                    }
+                    else
+                    {
+                        tempPrices.push_back(dailyCandles[currentDailyCandle.id - i].typicalPrice);
+                    }
+                }
+                genStrats[(Account.id - 300) / 3].executeStrategy(tempPrices);
             }
         }
 

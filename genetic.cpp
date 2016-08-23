@@ -21,27 +21,6 @@ Market::geneticStrategy::geneticStrategy(Market* thisMarket, std::vector<uint64_
     market = thisMarket;
 }
 
-arma::mat nonlin(arma::mat x, bool derivative = false)
-{
-    arma::mat returning = x;
-    for(unsigned int row = 0; row < x.n_rows; row++)
-    {
-        for(unsigned int col = 0; col < x.n_cols; col++)
-        {
-            if(derivative)
-            {
-                returning(row, col) = x(row, col) * (1 - x(row, col));
-            }
-            else
-            {
-                returning(row, col) = 1 / (1 + std::exp(-x(row, col)));
-            }
-        }
-    }
-
-    return returning;
-}
-
 void Market::geneticStrategy::executeStrategy(std::vector<double> prices)
 {
     arma::vec pricesMatrix(1000);
@@ -52,15 +31,16 @@ void Market::geneticStrategy::executeStrategy(std::vector<double> prices)
 
     for(std::vector<generation>::iterator it = children.begin(); it < children.end(); it++)
     {
-        double answer = arma::dot(pricesMatrix, (*it).strategyMatrix);
+        arma::mat strat = (*it).strategyMatrix;
+        double answer = arma::dot(pricesMatrix, strat);
 
-        if(answer > 5)
+        if(answer > 50)
         {
             market->clearOrders((*it).accountId);
             Market::account tempAccount = market->getAccount((*it).accountId);
             market->makeTrade(true, tempAccount.currencyBalance / market->getCurrentPrice(), market->getCurrentPrice(), tempAccount.id);
         }
-        else if(answer < -5)
+        else if(answer < -50)
         {
             market->clearOrders((*it).accountId);
             Market::account tempAccount = market->getAccount((*it).accountId);
@@ -95,13 +75,13 @@ void Market::geneticStrategy::evolve()
     //Select best child and mutate it
     for(std::vector<generation>::iterator it = children.begin(); it < children.end(); it++)
     {
-        std::uniform_int_distribution<unsigned int> startPosDist(0, 999);
+        std::uniform_int_distribution<unsigned int> startPosDist(0, 998);
         unsigned int startPos = startPosDist(market->generator);
 
-        std::uniform_int_distribution<unsigned int> endPosDist(startPos + 1, std::min(startPos + 21, static_cast<unsigned int>(999)));
+        std::uniform_int_distribution<unsigned int> endPosDist(startPos + 1, std::min(startPos + 51, static_cast<unsigned int>(999)));
         unsigned int endPos = endPosDist(market->generator);
 
-        std::uniform_real_distribution<double> valuesDist(-1, 1);
+        std::uniform_real_distribution<double> valuesDist(-100, 100);
 
         arma::mat newMatrix = best.strategyMatrix;
 
@@ -110,7 +90,7 @@ void Market::geneticStrategy::evolve()
             newMatrix(pos) = valuesDist(market->generator);
         }
 
-        std::cout << newMatrix << std::endl;
+        //std::cout << newMatrix << std::endl;
 
         (*it).strategyMatrix = newMatrix;
         (*it).startPrice = market->getCurrentPrice();
